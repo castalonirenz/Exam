@@ -1,101 +1,127 @@
-import React, { Component } from 'react';
-import { View, Text } from 'react-native';
-import firebase from 'react-native-firebase';
-class HomeScreen extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-    };
-  }
+import React, { useState, useEffect } from 'react'
 
-  componentDidMount() {
-    this._getToken()
-    this._getPermission()
-    this.createNotificationListeners();
-  }
+import { View, Text, TextInput, SafeAreaView, Button } from 'react-native'
+import { addUser, deleteUser, updateUser } from "../redux/actions/Auth";
+import { connect } from "react-redux";
+import UserList from "../SubViews/userList";
 
-  async createNotificationListeners() {
-    /*
-    * Triggered when a particular notification has been received in foreground
-    * */
-    this.notificationListener = firebase.notifications().onNotification((notification) => {
-      const { title, body, data } = notification;
-      this.showAlert(title, body, data, "foreground");
-    });
+const HomeScreen = (props) => {
 
-    /*
-    * If your app is in background, you can listen for when a notification is clicked / tapped / opened as follows:
-    * */
-    this.notificationOpenedListener = firebase.notifications().onNotificationOpened((notificationOpen) => {
-      const { title, body } = notificationOpen.notification;
-      this.showAlert(title, body, data);
-    });
+  const [username, setUserName] = useState(null)
+  const [userAddress, setUserAddress] = useState(null)
+  const [showUpdate, setShowUpdate] = useState(false)
+  const [index, setIndex] = useState(null)
+  useEffect(() => {
+    
+  }, [props.User.length, showUpdate])
 
-    /*
-    * If your app is closed, you can check if it was opened by a notification being clicked / tapped / opened as follows:
-    * */
-    const notificationOpen = await firebase.notifications().getInitialNotification();
-    if (notificationOpen) {
-      const { title, body, data } = notificationOpen.notification;
-      console.log(title, body, data, "notification open")
-      this.showAlert(title, body, data);
+
+  const _addSome = () => {
+    let userInfo = {
+      name: username,
+      address: userAddress
     }
-    /*
-    * Triggered for data only payload in foreground
-    * */
-    this.messageListener = firebase.messaging().onMessage((message) => {
-      //process data message
-      console.log(JSON.stringify(message));
-    });
+    let collectionUser = []
+    collectionUser.push(userInfo)
+    let Merge = collectionUser.concat(props.User)
+
+   
+    props.AddUser(Merge)
+    setUserAddress("")
+    setUserName("")
   }
 
-  showAlert(title, body, data) {
-    console.log(title, body, data, "this is me")
-    Alert.alert(
-      title, body,
-      [
-        { text: 'OK', onPress: () => console.log('OK Pressed') },
-      ],
-      { cancelable: false },
-    );
+  const _deleteSome = (index) => {
+    
+
+    props.DeleteUser(index)
   }
 
+  const _updateSome = (val, index) => {
 
+    setShowUpdate(true)
+    setUserName(val.name)
+    setUserAddress(val.address)
+    setIndex(index)
 
-  _getPermission = async () => {
-    const enabled = await firebase.messaging().hasPermission();
-    if (enabled) {
-      // user has permissions
-      console.log('have permission')
-    } else {
-      // user doesn't have permission
-      console.log('dont have permission')
-      try {
-        await firebase.messaging().requestPermission();
-        // User has authorised
-      } catch (error) {
-        // User has rejected permissions
-      }
+    
+  }
+
+  const _submitUpdate = () => {
+    let userInfo = {
+      name: username,
+      address: userAddress
     }
+    let collectionUser = []
+    collectionUser.push(userInfo)
+    // let Merge = collectionUser.concat(props.User)
+    // props.User.splice(index, 1, action.credentials)
+    props.UpdateUser(userInfo, index)
+    setIndex(null)
+    setShowUpdate(false)
+    setUserAddress("")
+    setUserName("")
   }
-
-  _getToken = async () => {
-    const fcmToken = await firebase.messaging().getToken();
-    if (fcmToken) {
-      // alert(fcmToken)
-      console.log(fcmToken, "device Token")
-    } else {
-      console.log("failed")
-    }
-  }
-
-  render() {
-    return (
+  
+  return (
+    <SafeAreaView stye={{ flex: 1 }}>
       <View>
-        <Text> HomeScreen </Text>
+        <Text>
+
+          Add something
+            </Text>
+
+        <View style={{ padding: 10 }}>
+          <TextInput
+            value={username}
+            onChangeText={(val) => setUserName(val)}
+            style={{ backgroundColor: "#c5c5c5", padding: 10, width: "100%", height: 40, borderRadius: 5 }}
+            placeholderTextColor="#fff"
+            placeholder="Task"
+          />
+
+          <TextInput
+            value={userAddress}
+            onChangeText={(val) => setUserAddress(val)}
+            style={{ backgroundColor: "#c5c5c5", padding: 10, width: "100%", height: 40, marginTop: 5, borderRadius: 5 }}
+            placeholderTextColor="#fff"
+            placeholder="Description    "
+          />
+
+          {showUpdate == true ? <Button
+            onPress={() => _submitUpdate()}
+            title="Update" /> :
+            
+            <Button
+              onPress={() => _addSome()}
+              title="Add" />
+            }
+
+        </View>
+
+        <View>
+          <UserList
+            onUpdate={_updateSome}
+            onDelete={_deleteSome}
+          />
+        </View>
       </View>
-    );
+    </SafeAreaView>
+  )
+}
+
+
+const mapStateToProps = state => {
+  return {
+    User: state.Auth.credentials
   }
 }
 
-export default HomeScreen;
+const mapDispatchToProps = dispatch => {
+  return {
+    AddUser: (val) => dispatch(addUser(val)),
+    DeleteUser: (index) => dispatch(deleteUser(index)),
+    UpdateUser: (val,index) => dispatch(updateUser(val,index)),
+  }
+}
+export default connect(mapStateToProps, mapDispatchToProps)(HomeScreen)

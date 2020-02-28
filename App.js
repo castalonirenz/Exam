@@ -45,7 +45,7 @@ const App = () => {
 };
 
 const SwitchNav = createSwitchNavigator({
-    Auth: AuthNavContainer,
+
     LoginSuccess: HomeNavContainer
 })
 
